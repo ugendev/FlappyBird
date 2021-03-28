@@ -10,6 +10,14 @@ const game = {
 		pipedown: null,
 		pipeup: null,
 	},
+	pipesPairsCoords: [],
+	upPipeYMin: -164,
+	upPipeYMax: 0,
+	firstPipe: {
+		x: 0,
+		y: 0,
+		isChecked: false
+	},
 	bird: {
 		x: 50,
 		y: 200,
@@ -62,6 +70,25 @@ const game = {
 		this.sprites.pipeup 		= new Image()
 		this.sprites.pipeup.src		= "./img/pipeup.png"
 
+		const upPipeY 				= this.getRandomPipeY()
+		const downPipeY				= upPipeY + 282 + this.pipePadding
+
+		this.firstPipe.x 			= 400
+		this.firstPipe.y 			= upPipeY
+
+		this.pipesPairsCoords.push(
+			{
+				upPipe: {
+					x: 400,
+					y: upPipeY
+				},
+				downPipe: {
+					x: 400,
+					y: downPipeY
+				}
+			}
+		)
+
 		this.run()
 	},
 	render() {
@@ -79,11 +106,63 @@ const game = {
 		this.ctx.drawImage(this.sprites.bird, this.bird.x, this.bird.y)
         this.ctx.restore();
 
-		this.ctx.drawImage(this.sprites.pipeup, 400, 0)
-		this.ctx.drawImage(this.sprites.pipedown, 400, this.sprites.pipeup.height + this.pipePadding)
+		this.pipesPairsCoords.forEach(item => {
+			this.ctx.drawImage(this.sprites.pipeup, item.upPipe.x, item.upPipe.y)
+			this.ctx.drawImage(this.sprites.pipedown, item.downPipe.x, item.downPipe.y)
+		});
+
 	},
 	update() {
 		this.bird[this.bird.moveMethod]()
+
+		let newPipe = null
+
+		this.pipesPairsCoords.forEach(item => {
+			if (!item.upPipe.isChecked && item.upPipe.x < 400) {
+				const upPipeY = this.getRandomPipeY()
+
+				newPipe = {
+					upPipe: {
+						x: this.width,
+						y: upPipeY,
+						isChecked: false
+					},
+					downPipe: {
+						x: this.width,
+						y: upPipeY + 282 + this.pipePadding
+					}
+				}
+
+				item.upPipe.isChecked = true
+			}
+
+			item.upPipe.x 	-= 3
+			item.downPipe.x -= 3
+		})
+
+		if (newPipe) {
+			this.pipesPairsCoords.push(newPipe)
+		}
+
+		this.pipesPairsCoords = this.pipesPairsCoords.filter(item => item.upPipe.x > -this.sprites.pipeup.width)
+
+		if (this.bird.y + this.sprites.bird.height >= this.height) {
+			this.gameOver()
+		}
+
+		this.pipesPairsCoords.forEach(item => {
+			const upPipeCondition = this.bird.x + this.sprites.bird.width >= item.upPipe.x &&
+				this.bird.x <= item.upPipe.x + this.sprites.pipeup.width &&
+				this.bird.y <= item.upPipe.y + this.sprites.pipeup.height
+
+			const downPipeCondition = this.bird.x + this.sprites.bird.width >= item.downPipe.x &&
+				this.bird.x <= item.downPipe.x + this.sprites.pipedown.width &&
+				this.bird.y + this.sprites.bird.height >= item.downPipe.y
+
+			if (upPipeCondition || downPipeCondition) {
+				this.gameOver()
+			}
+		})
 	},
 	run() {
 		this.update()
@@ -92,6 +171,13 @@ const game = {
 		requestAnimationFrame(() => {
 			game.run()
 		})
+	},
+	getRandomPipeY() {
+		return Math.floor(Math.random() * (Math.floor(this.upPipeYMax) - Math.ceil(this.upPipeYMin) + 1)) + this.upPipeYMin
+	},
+	gameOver() {
+		alert("GameOver")
+		this.run = null
 	}
 }
 
